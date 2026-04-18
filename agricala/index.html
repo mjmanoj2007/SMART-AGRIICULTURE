@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AgriCalendar AI</title>
+
+  <meta name="description"
+    content="A smart mobile-friendly web app for farmers providing weather insights, crop calendars, and AI voice assistance.">
+  <meta name="theme-color" content="#2e7d32">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+
+  <!-- Loading Spinner -->
+  <div id="loading-spinner" class="spinner-overlay hidden">
+    <div class="spinner"></div>
+    <p class="spinner-text" data-i18n="loading">Loading...</p>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Auth Screen -->
+  <section id="auth-screen" class="screen flex-center slide-in active">
+    <div class="auth-card glass-card">
+      <div class="brand">
+        <i class="fa-solid fa-leaf text-accent"></i>
+        <h1>AgriCalendar AI</h1>
+      </div>
+
+      <p class="subtitle" data-i18n="auth_subtitle">Smart farming companion</p>
+
+      <form id="auth-form" class="auth-form">
+        <div class="input-group">
+          <i class="fa-solid fa-envelope"></i>
+          <input type="email" id="auth-email" placeholder="Email" required>
+        </div>
+        <div class="input-group">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="auth-password" placeholder="Password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary primary-glow" id="auth-btn">
+          <span data-i18n="login">Login</span>
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        <span data-i18n="no_account">Don't have an account?</span>
+        <a href="#" id="toggle-auth-mode" data-i18n="signup">Sign Up</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- App Wrapper (Hidden initially) -->
+  <section id="app-screen" class="screen hidden">
+    <!-- Top Nav -->
+    <header class="top-nav glass-nav">
+      <div class="user-info">
+        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+        <div>
+          <h3 id="user-greeting" data-i18n="greeting">Hello, Farmer</h3>
+          <p id="current-date" class="date-text">--</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="lang-toggle" class="btn-icon">
+          <i class="fa-solid fa-language"></i>
+          <span class="lang-label">EN</span>
+        </button>
+        <button id="logout-btn" class="btn-icon">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="content-area">
+
+      <!-- DASHBOARD TAB -->
+      <div id="tab-dashboard" class="tab-content active fade-enter">
+        <h2 class="section-title" data-i18n="dashboard">Dashboard</h2>
+
+        <!-- Offline Warning -->
+        <div id="offline-warning" class="alert alert-warning hidden">
+          <i class="fa-solid fa-wifi"></i> <span data-i18n="offline_mode">Offline Mode Active</span>
+        </div>
+
+        <!-- Weather Card -->
+        <div class="card weather-card gradient-primary">
+          <div class="weather-header">
+            <div>
+              <p class="weather-location" id="weather-location"><i class="fa-solid fa-location-dot"></i> <span
+                  data-i18n="detecting_location">Detecting...</span></p>
+              <h1 class="weather-temp" id="weather-temp">--°C</h1>
+            </div>
+            <div class="weather-icon-large">
+              <i class="fa-solid fa-cloud-sun" id="weather-icon"></i>
+            </div>
+          </div>
+
+          <div class="weather-details">
+            <div class="detail">
+              <i class="fa-solid fa-droplet"></i>
+              <span id="weather-humidity">--%</span>
+            </div>
+            <div class="detail">
+              <i class="fa-solid fa-wind"></i>
+              <span id="weather-wind">-- m/s</span>
+            </div>
+          </div>
+
+          <div class="ai-advice glass-panel">
+            <i class="fa-solid fa-robot"></i>
+            <p id="weather-advice" data-i18n="weather_advice_loading">Fetching intelligent advice...</p>
+          </div>
+        </div>
+
+        <!-- Quick Insights -->
+        <div class="insights-grid">
+          <div class="card insight-card">
+            <div class="insight-icon bg-warning"><i class="fa-solid fa-bell"></i></div>
+            <div>
+              <h4 data-i18n="alert_title">Alert</h4>
+              <p data-i18n="alert_desc">Fertilize rice tomorrow</p>
+            </div>
+          </div>
+
+          <div class="card insight-card">
+            <div class="insight-icon bg-info"><i class="fa-solid fa-list-check"></i></div>
+            <div>
+              <h4 data-i18n="task_title">Today's Task</h4>
+              <p data-i18n="task_desc">Inspect soil moisture</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALENDAR TAB -->
+      <div id="tab-calendar" class="tab-content hidden fade-enter">
+        <h2 class="section-title" data-i18n="crop_calendar">Smart Calendar</h2>
+
+        <div class="card selector-card">
+          <label for="crop-selector" data-i18n="select_crop">Select Crop:</label>
+          <div class="custom-select">
+            <select id="crop-selector">
+              <option value="rice" data-i18n="crop_rice">Rice (Paddy)</option>
+              <option value="wheat" data-i18n="crop_wheat">Wheat</option>
+              <option value="maize" data-i18n="crop_maize">Maize</option>
+              <option value="sugarcane" data-i18n="crop_sugarcane">Sugarcane</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="calendar-tasks-container" class="calendar-timeline">
+          <!-- Dynamic timelines injected here -->
+        </div>
+      </div>
+
+      <!-- AI HUB TAB -->
+      <div id="tab-aihub" class="tab-content hidden fade-enter">
+        <h2 class="section-title" data-i18n="ai_hub">AI Assistant & Tools</h2>
+
+        <!-- Voice Chatbot -->
+        <div class="card chat-card glass-card">
+          <div class="chat-header">
+            <i class="fa-solid fa-robot"></i> <span data-i18n="tamil_bot">Tamil Voice Bot</span>
+          </div>
+
+          <div class="chat-window" id="chat-window">
+            <div class="message bot-msg">
+              <div class="msg-bubble">
+                <p data-i18n="bot_greeting">வணக்கம்! நான் உங்கள் விவசாய உதவியாளர். நான் உங்களுக்கு எப்படி உதவ முடியும்?
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <button id="mic-btn" class="btn-icon pulse-btn bg-accent"><i class="fa-solid fa-microphone"></i></button>
+            <input type="text" id="chat-input" placeholder="Type or speak (Tamil)..."
+              data-i18n-placeholder="chat_placeholder">
+            <button id="send-msg-btn" class="btn-icon"><i class="fa-solid fa-paper-plane"></i></button>
+          </div>
+        </div>
+
+        <!-- Crop Suggestion & Disease AI mock tools -->
+        <h3 class="subsection-title mt-2" data-i18n="smart_tools">Smart Tools</h3>
+
+        <div class="ai-tools-grid">
+          <div class="card tool-card" onclick="openToolModal('recommendation')">
+            <i class="fa-solid fa-seedling text-primary text-xl"></i>
+            <h4 data-i18n="ai_recommend">Crop Recommender</h4>
+          </div>
+          <div class="card tool-card" onclick="openToolModal('disease')">
+            <i class="fa-solid fa-leaf text-warning text-xl"></i>
+            <h4 data-i18n="ai_disease">Disease Detector</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTES TAB -->
+      <div id="tab-notes" class="tab-content hidden fade-enter">
+        <h2 class="section-title" data-i18n="farmer_notes">Farmer Notes</h2>
+
+        <div class="card add-note-card">
+          <textarea id="new-note-text" rows="3" placeholder="Write a note... (e.g., Bought seeds today)"
+            data-i18n-placeholder="note_placeholder"></textarea>
+          <button id="save-note-btn" class="btn btn-primary full-width mt-1"><i class="fa-solid fa-plus"></i> <span
+              data-i18n="save_note">Save Note</span></button>
+        </div>
+
+        <div id="notes-container" class="notes-grid">
+          <!-- Notes injected here -->
+        </div>
+      </div>
+
+      <!-- LOANS TAB -->
+      <div id="tab-loans" class="tab-content hidden fade-enter">
+        <h2 class="section-title" data-i18n="gov_loans_title">Govt. Schemes & Loans</h2>
+
+        <div class="loans-grid">
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-tractor text-accent text-xl"></i>
+              <h4 data-i18n="loan1_title">PM Kisan Samman Nidhi</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan1_desc">Income support of ₹6000 per year for farmer
+              families.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-money-bill-wheat text-primary text-xl"></i>
+              <h4 data-i18n="loan2_title">Kisan Credit Card (KCC)</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan2_desc">Adequate and timely short-term credit for
+              agricultural needs.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-umbrella text-info text-xl"></i>
+              <h4 data-i18n="loan3_title">PM Fasal Bima Yojana</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan3_desc">Crop insurance scheme against natural calamities
+              and pest attacks.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-solar-panel text-warning text-xl"></i>
+              <h4 data-i18n="loan4_title">PM KUSUM Scheme</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan4_desc">Subsidies for installing solar pumps and
+              grid-connected solar power plants.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-warehouse text-primary text-xl"></i>
+              <h4 data-i18n="loan5_title">Agri Infrastructure Fund</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan5_desc">Debt financing facility for post-harvest
+              management infrastructure.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-cow text-accent text-xl"></i>
+              <h4 data-i18n="loan6_title">NABARD Dairy Subsidy (DEDS)</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan6_desc">Financial assistance and subsidy for setting up
+              modern dairy farms.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+
+          <div class="card loan-card">
+            <div class="loan-header">
+              <i class="fa-solid fa-handshake-angle text-info text-xl"></i>
+              <h4 data-i18n="loan7_title">Mudra Loan for Allied Agri</h4>
+            </div>
+            <p class="loan-desc text-muted mt-1" data-i18n="loan7_desc">Loans up to ₹10 lakh for activities like
+              poultry, beekeeping, and fisheries.</p>
+            <button class="btn btn-primary mt-1 full-width"><i class="fa-solid fa-arrow-right"></i> <span
+                data-i18n="apply_now">Know More</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHOP TAB -->
+      <div id="tab-shop" class="tab-content hidden fade-enter">
+        <h2 class="section-title" data-i18n="shop_title">Fertilizer Store</h2>
+        <div id="shop-items-container" class="loans-grid">
+          <!-- Dynamically generated by shop.js -->
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="#" class="nav-item active" data-target="tab-dashboard">
+        <i class="fa-solid fa-house"></i>
+        <span data-i18n="nav_home">Home</span>
+      </a>
+      <a href="#" class="nav-item" data-target="tab-calendar">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span data-i18n="nav_calendar">Calendar</span>
+      </a>
+      <a href="#" class="nav-item" data-target="tab-aihub">
+        <i class="fa-solid fa-microchip"></i>
+        <span data-i18n="nav_ai">AI Hub</span>
+      </a>
+      <a href="#" class="nav-item" data-target="tab-notes">
+        <i class="fa-solid fa-clipboard"></i>
+        <span data-i18n="nav_notes">Notes</span>
+      </a>
+      <a href="#" class="nav-item" data-target="tab-loans">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+        <span data-i18n="nav_loans">Loans</span>
+      </a>
+      <a href="#" class="nav-item" data-target="tab-shop">
+        <i class="fa-solid fa-shop"></i>
+        <span data-i18n="nav_shop">Shop</span>
+      </a>
+    </nav>
+  </section>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-content card">
+      <div class="modal-header">
+        <h3 id="modal-title">Tool</h3>
+        <button id="close-modal-btn" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="modal-body" class="modal-body">
+        <!-- Handled dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script src="js/ai-hub.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/shop.js"></script>
+</body>
+
+</html>
